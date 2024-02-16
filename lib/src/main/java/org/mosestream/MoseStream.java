@@ -27,17 +27,58 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+
+/**
+ * The base class for all streams.
+ *
+ * <pre>{@code
+ *     int sum = MoseStream.of(widgets)
+ *                  .filter(widget -> widget.getColour() == RED)
+ *                  .mapToInteger(widget -> widget.getWeight())
+ *                  .sum();
+ * }</pre>
+ *
+ * <p>A stream takes actions to apply to an iterator, then will apply those actions on the iterator to get the desired result.
+ * The actions do NOT happen when called, but only occur when a finisher action has been called.</p>
+ *
+ * <p>For example, no change will occur when {@link #filter(ThrowablePredicate)}} is called, but all changes leading up
+ * to will apply when {@link #toList()}} is called</p>
+ *
+ *
+ * @param <V> The type of elements the stream is processing
+ * @since 1.0
+ */
 public interface MoseStream<V> {
 
+    /**
+     * Creates a new instance of a basic MoseStream for generic streaming of an Iterable (such as a Collection)
+     *
+     * @param iterable The stream's target
+     * @return an unmodified stream ready for your actions
+     * @param <V> The type of elements the stream is processing
+     */
     static <V> MoseStream<V> stream(Iterable<V> iterable) {
         return new SimpleBaseStream<>(iterable);
     }
 
+    /**
+     * Creates a new instance of a basic MoseStream for generic streaming of an Array
+     *
+     * @param array The array for processing
+     * @return an unmodified stream ready for your actions
+     * @param <V> The type of elements the stream is processing
+     */
     @SafeVarargs
     static <V> MoseStream<V> stream(V... array) {
         return stream(new ArrayIterable<>(array));
     }
 
+    /**
+     * Creates a new instance of a double focused MoseStream for number streaming of an iterable (such as a Collection)
+     *
+     * @param iterable The stream's target
+     * @return an unmodified stream ready for your actions
+     */
     static MoseDoubleStream streamDouble(Iterable<Double> iterable) {
         return new DoubleBaseStream(iterable);
     }
@@ -54,14 +95,50 @@ public interface MoseStream<V> {
         return streamInteger(new IntegerArrayIterable(array));
     }
 
+    /**
+     * An action that will remove all elements from the stream that do not match the predicate
+     *
+     * <pre>{@code
+     *
+     *  List<Integer> list = MoseStream.stream(1, 2, 3, 4).filter(value -> value > 2).toList();
+     *  //list is now [3, 4]
+     * }</pre>
+     *
+     * @param predicate the rule to apply for filtering
+     * @return A Stream with the filter action loaded
+     * @param <T> If the rules for the filter throws an exception, this is the type of exception it will throw.
+     *           By default, this will assume a RuntimeException
+     */
     @NotNull
     @CheckReturnValue
     <T extends Throwable> MoseStream<V> filter(@NotNull ThrowablePredicate<V, T> predicate);
 
+    /**
+     * An action that will remove all elements from the stream that do match the predicate
+     *
+     * <pre>{@code
+     *
+     *  List<Integer> list = MoseStream.stream(1, 2, 3, 4).filter(value -> value > 2).toList();
+     *  //list is now [1, 2]
+     * }</pre>
+     *
+     * @param predicate the rule to apply for filtering
+     * @return A Stream with the filter action loaded
+     * @param <T> If the rules for the filter throws an exception, this is the type of exception it will throw.
+     *           By default, this will assume a RuntimeException
+     */
     @NotNull
     @CheckReturnValue
     <T extends Throwable> MoseStream<V> filterOut(@NotNull ThrowablePredicate<V, T> predicate);
 
+    /**
+     * An action that will run on each element and apply the function, leaving the stream with the result of the action
+     *
+     * @param function
+     * @return
+     * @param <M>
+     * @param <T>
+     */
     @NotNull
     @CheckReturnValue
     <M, T extends Throwable> MoseStream<M> map(@NotNull ThrowableFunction<V, M, T> function);
