@@ -18,7 +18,7 @@ public class FlatMapAction<Value, Map, T extends Throwable> implements WholeActi
     }
 
     @Override
-    public @UnknownNullability StreamActionResult<Iterable<Map>> apply(@UnknownNullability ThrowableIterator<Value> value) throws T {
+    public @UnknownNullability StreamActionResult<Iterable<Map>> apply(@UnknownNullability ThrowableIterator<Value, T> value) throws T {
         List<Map> result = new LinkedList<>();
         try {
             while (value.hasNext()) {

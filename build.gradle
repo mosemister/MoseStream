@@ -27,9 +27,13 @@ dependencies {
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        targetCompatibility = JavaVersion.VERSION_17
-        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_22
+        sourceCompatibility = JavaVersion.VERSION_22
     }
+}
+
+tasks.withType(JavaCompile).each {
+    it.options.compilerArgs.add("--enable-preview")
 }
 
 tasks.named('test') {

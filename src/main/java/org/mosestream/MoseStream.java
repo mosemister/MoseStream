@@ -17,10 +17,7 @@ import org.mosestream.lamda.ThrowablePredicate;
 import org.mosestream.number.MoseDoubleStream;
 import org.mosestream.number.MoseIntegerStream;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.IntFunction;
 import java.util.stream.Collector;
@@ -44,7 +41,6 @@ import java.util.stream.Stream;
  * <p>For example, no change will occur when {@link #filter(ThrowablePredicate)}} is called, but all changes leading up
  * to will apply when {@link #toList()}} is called</p>
  *
- *
  * @param <V> The type of elements the stream is processing
  * @since 1.0
  */
@@ -54,8 +50,8 @@ public interface MoseStream<V> {
      * Creates a new instance of a basic MoseStream for generic streaming of an Iterable (such as a Collection)
      *
      * @param iterable The stream's target
+     * @param <V>      The type of elements the stream is processing
      * @return an unmodified stream ready for your actions
-     * @param <V> The type of elements the stream is processing
      */
     static <V> MoseStream<V> stream(Iterable<V> iterable) {
         return new SimpleBaseStream<>(iterable);
@@ -65,8 +61,8 @@ public interface MoseStream<V> {
      * Creates a new instance of a basic MoseStream for generic streaming of an Array
      *
      * @param array The array for processing
+     * @param <V>   The type of elements the stream is processing
      * @return an unmodified stream ready for your actions
-     * @param <V> The type of elements the stream is processing
      */
     @SafeVarargs
     static <V> MoseStream<V> stream(V... array) {
@@ -105,9 +101,9 @@ public interface MoseStream<V> {
      * }</pre>
      *
      * @param predicate the rule to apply for filtering
+     * @param <T>       If the rules for the filter throws an exception, this is the type of exception it will throw.
+     *                  By default, this will assume a RuntimeException
      * @return A Stream with the filter action loaded
-     * @param <T> If the rules for the filter throws an exception, this is the type of exception it will throw.
-     *           By default, this will assume a RuntimeException
      */
     @NotNull
     @CheckReturnValue
@@ -123,9 +119,9 @@ public interface MoseStream<V> {
      * }</pre>
      *
      * @param predicate the rule to apply for filtering
+     * @param <T>       If the rules for the filter throws an exception, this is the type of exception it will throw.
+     *                  By default, this will assume a RuntimeException
      * @return A Stream with the filter action loaded
-     * @param <T> If the rules for the filter throws an exception, this is the type of exception it will throw.
-     *           By default, this will assume a RuntimeException
      */
     @NotNull
     @CheckReturnValue
@@ -135,9 +131,9 @@ public interface MoseStream<V> {
      * An action that will run on each element and apply the function, leaving the stream with the result of the action
      *
      * @param function
-     * @return
      * @param <M>
      * @param <T>
+     * @return
      */
     @NotNull
     @CheckReturnValue
@@ -191,15 +187,18 @@ public interface MoseStream<V> {
     @CheckReturnValue
     <T extends Throwable> MoseStream<V> each(@NotNull ThrowableConsumer<V, T> consumer);
 
+    <By, Throw extends Throwable> MoseStream<MoseStream<V>> groupBy(ThrowableFunction<V, By, Throw> function);
+
     @NotNull
     @CheckReturnValue
-    <C, E, K, T extends Throwable> MoseStream<E> groupBy(Collector<V, C, E> collector, ThrowableFunction<V, K, T> function);
+    default <C, E, K, T extends Throwable> MoseStream<E> groupBy(Collector<V, C, E> collector, ThrowableFunction<V, K, T> function) {
+        return groupBy(function).map(stream -> stream.collect(collector));
+    }
 
     @UnknownNullability
     @CheckReturnValue
     <R, T extends Throwable> R reduce(@UnknownNullability R initialValue, ThrowableBiFunction<V, R, R, T> function) throws T;
 
-    @UnknownNullability
     @CheckReturnValue
     <T extends Throwable> Optional<V> reduce(ThrowableBiFunction<V, V, V, T> function) throws T;
 
@@ -213,7 +212,7 @@ public interface MoseStream<V> {
 
     @NotNull
     @CheckReturnValue
-    ThrowableIterator<V> iterator();
+    <T extends Throwable> ThrowableIterator<V, T> iterator();
 
     @CheckReturnValue
     <T extends Throwable> boolean allMatch(@NotNull ThrowablePredicate<V, T> value) throws T;
@@ -249,6 +248,20 @@ public interface MoseStream<V> {
 
     default <C> MoseStream<C> filterCast(@NotNull Class<?> type) {
         return this.filter(type::isInstance).map(value -> (C) value);
+    }
+
+    @NotNull MoseStream<V> include(@NotNull MoseStream<V> stream);
+
+    default MoseStream<V> include(@NotNull Iterator<MoseStream<V>> streams) {
+        MoseStream<V> ret = this;
+        while (streams.hasNext()) {
+            ret = ret.include(streams.next());
+        }
+        return ret;
+    }
+
+    default MoseStream<V> includeValues(V... values) {
+        return include(MoseStream.stream(values));
     }
 
 }

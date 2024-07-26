@@ -33,7 +33,7 @@ public abstract class AbstractActionStream<V, S extends AbstractActionStream<V, 
     }
 
     @Override
-    public @NotNull ThrowableIterator<V> iterator() {
+    public <Throw extends Throwable> @NotNull ThrowableIterator<V, Throw> iterator() {
         return new MoseStreamIterator<>(this);
     }
 

@@ -5,7 +5,7 @@ import org.jetbrains.annotations.ApiStatus;
 import java.util.Iterator;
 
 @ApiStatus.Internal
-public class ThrowableIteratorWrapper<V> implements ThrowableIterator<V> {
+public class ThrowableIteratorWrapper<V, Throw extends Throwable> implements ThrowableIterator<V, Throw> {
 
     private final Iterator<V> iterator;
 

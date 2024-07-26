@@ -5,7 +5,7 @@ import org.mosestream.action.StreamAction;
 import org.mosestream.action.misc.ActionTarget;
 import org.mosestream.iterator.ThrowableIterator;
 
-public interface WholeAction<Value, Mapped, T extends Throwable> extends StreamAction<ThrowableIterator<Value>, Iterable<Mapped>, T> {
+public interface WholeAction<Value, Mapped, T extends Throwable> extends StreamAction<ThrowableIterator<Value, T>, Iterable<Mapped>, T> {
 
     @Override
     default @NotNull ActionTarget target() {

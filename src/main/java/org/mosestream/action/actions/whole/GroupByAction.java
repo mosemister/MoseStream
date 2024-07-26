@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+@Deprecated
 public class GroupByAction<V, K, C, E, T extends Throwable> implements WholeAction<V, E, T> {
 
     private final Collector<V, C, E> collector;
@@ -24,7 +25,7 @@ public class GroupByAction<V, K, C, E, T extends Throwable> implements WholeActi
     }
 
     @Override
-    public @UnknownNullability StreamActionResult<Iterable<E>> apply(@UnknownNullability ThrowableIterator<V> value) throws T {
+    public @UnknownNullability StreamActionResult<Iterable<E>> apply(@UnknownNullability ThrowableIterator<V, T> value) throws T {
         try {
             while (value.hasNext()) {
                 V iterNext = value.next();

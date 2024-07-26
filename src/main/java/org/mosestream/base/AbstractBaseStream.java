@@ -29,7 +29,7 @@ public abstract class AbstractBaseStream<V, S extends AbstractActionStream<V, S>
     }
 
     @Override
-    public @NotNull ThrowableIterator<V> iterator() {
+    public <Throw extends Throwable> @NotNull ThrowableIterator<V, Throw> iterator() {
         return new ThrowableIteratorWrapper<>(this.iterable.iterator());
     }
 }

@@ -4,6 +4,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.mosestream.AbstractStream;
 import org.mosestream.action.StreamAction;
 import org.mosestream.action.StreamActionResult;
+import org.mosestream.action.actions.whole.WholeAction;
 import org.mosestream.action.stream.AbstractActionStream;
 import org.mosestream.base.AbstractBaseStream;
 import org.mosestream.lamda.ThrowableSingleton;
@@ -12,14 +13,14 @@ import java.util.LinkedList;
 import java.util.List;
 
 @ApiStatus.Internal
-public class MoseStreamIterator<Value> implements ThrowableIterator<Value> {
+public class MoseStreamIterator<Value, Throw extends Throwable> implements ThrowableIterator<Value, Throw> {
 
     private final List<AbstractStream<?, ?>> all = new LinkedList<>();
-    private final ThrowableSingleton<ThrowableIterator<?>, ?> iterator;
+    private final ThrowableSingleton<ThrowableIterator<?, ?>, ?> iterator;
 
     private boolean hasCached;
     private Object cached;
-    private Throwable cachedException;
+    private Throw cachedException;
 
     public MoseStreamIterator(AbstractStream<Value, ?> original) {
         AbstractStream<?, ?> stream = original;
@@ -43,9 +44,9 @@ public class MoseStreamIterator<Value> implements ThrowableIterator<Value> {
         }
     }
 
-    private <A, M> ThrowableIterator<M> getPreBase(AbstractStream<A, ?> stream) throws Throwable {
-        ThrowableIterator<A> iterator = stream.iterator();
-        Iterable<M> mapped = (Iterable<M>) stream.preAction().apply(iterator).result();
+    private <A, M, T extends Throwable> ThrowableIterator<M, ?> getPreBase(AbstractStream<A, ?> stream) throws Throwable {
+        ThrowableIterator<A, T> iterator = stream.iterator();
+        Iterable<M> mapped = (Iterable<M>) ((WholeAction<A, ?, T>)stream.preAction()).apply(iterator).result();
         return new ThrowableIteratorWrapper<>(mapped.iterator());
     }
 
@@ -54,11 +55,14 @@ public class MoseStreamIterator<Value> implements ThrowableIterator<Value> {
             return;
         }
         this.hasCached = true;
-        ThrowableIterator<?> current;
+        ThrowableIterator<?, ?> current;
         try {
             current = this.iterator.get();
         } catch (Throwable e) {
-            this.cachedException = e;
+            if(e instanceof RuntimeException re){
+                throw re;
+            }
+            this.cachedException = (Throw)e;
             return;
         }
         while (current.hasNext()) {
@@ -68,7 +72,10 @@ public class MoseStreamIterator<Value> implements ThrowableIterator<Value> {
                     break;
                 }
             } catch (Throwable e) {
-                this.cachedException = e;
+                if(e instanceof RuntimeException re){
+                    throw re;
+                }
+                this.cachedException = (Throw)e;
             }
         }
     }
@@ -86,7 +93,10 @@ public class MoseStreamIterator<Value> implements ThrowableIterator<Value> {
                 }
                 value = result.result();
             } catch (Throwable e) {
-                cachedException = e;
+                if(e instanceof RuntimeException re){
+                    throw re;
+                }
+                cachedException = (Throw)e;
                 return true;
             }
         }
@@ -109,13 +119,13 @@ public class MoseStreamIterator<Value> implements ThrowableIterator<Value> {
 
     }
 
-    public Value next() throws Throwable {
+    public Value next() throws Throw {
         if (!this.hasCached) {
             cache();
         }
         this.hasCached = false;
         if (this.cachedException != null) {
-            Throwable throwable = cachedException;
+            Throw throwable = cachedException;
             this.cachedException = null;
             throw throwable;
         }

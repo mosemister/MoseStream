@@ -6,12 +6,10 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 import org.mosestream.action.StreamAction;
 import org.mosestream.action.actions.*;
-import org.mosestream.action.actions.whole.FlatMapAction;
-import org.mosestream.action.actions.whole.GroupByAction;
-import org.mosestream.action.actions.whole.SortAction;
-import org.mosestream.action.actions.whole.WholeAction;
+import org.mosestream.action.actions.whole.*;
 import org.mosestream.action.stream.DoubleActionStream;
 import org.mosestream.action.stream.IntegerActionStream;
+import org.mosestream.iterator.MoseStreamIterator;
 import org.mosestream.iterator.ThrowableIterator;
 import org.mosestream.lamda.ThrowableBiFunction;
 import org.mosestream.lamda.ThrowableConsumer;
@@ -24,6 +22,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.stream.Collector;
@@ -47,6 +46,11 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     public @Nullable WholeAction<V, ?, ?> preAction() {
         return this.preActions;
+    }
+
+    @Override
+    public @NotNull MoseStream<V> include(@NotNull MoseStream<V> stream) {
+        return null;
     }
 
     @Override
@@ -104,6 +108,12 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
     }
 
     @Override
+    public <By, Throw extends Throwable> @NotNull MoseStream<MoseStream<V>> groupBy(ThrowableFunction<V, By, Throw> function) {
+        this.preActions = new GroupToStreamByAction<>(function);
+        return newAction();
+    }
+
+    @Override
     public @NotNull <T extends Throwable> S distinctBy(@NotNull ThrowableFunction<V, ?, T> function) {
         this.action = new DistinctByAction<>(function);
         return newInstance();
@@ -122,7 +132,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public <T extends Throwable> boolean allMatch(@NotNull ThrowablePredicate<V, T> value) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             while (iterator.hasNext()) {
                 V val = iterator.next();
@@ -138,7 +148,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public <T extends Throwable> boolean noneMatch(@NotNull ThrowablePredicate<V, T> value) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             while (iterator.hasNext()) {
                 V val = iterator.next();
@@ -154,7 +164,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public <T extends Throwable> boolean anyMatch(@NotNull ThrowablePredicate<V, T> value) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             while (iterator.hasNext()) {
                 V val = iterator.next();
@@ -170,7 +180,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public <T extends Throwable> long count() throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             long count = 0;
             while (iterator.hasNext()) {
@@ -196,12 +206,6 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
     }
 
     @Override
-    public @NotNull <C, E, K, T extends Throwable> MoseStream<E> groupBy(Collector<V, C, E> collector, ThrowableFunction<V, K, T> function) {
-        this.preActions = new GroupByAction<>(collector, function);
-        return newAction();
-    }
-
-    @Override
     public @NotNull <T extends Throwable> S each(@NotNull ThrowableConsumer<V, T> consumer) {
         this.action = new EachAction<>(consumer);
         return newInstance();
@@ -218,7 +222,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
     }
 
     private <T extends Throwable> Optional<V> compare(@NotNull Comparator<V> compare, IntPredicate assign) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             V toCompare = null;
             while (iterator.hasNext()) {
@@ -240,7 +244,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public @NotNull <R, T extends Throwable> R reduce(@UnknownNullability R initialValue, ThrowableBiFunction<V, R, R, T> function) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             R value = initialValue;
             while (iterator.hasNext()) {
@@ -255,7 +259,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public @NotNull <T extends Throwable> Optional<V> reduce(ThrowableBiFunction<V, V, V, T> function) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             V value = null;
             while (iterator.hasNext()) {
@@ -275,7 +279,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public <T extends Throwable> void forEach(@NotNull ThrowableConsumer<V, T> consumer) throws T {
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         try {
             while (iterator.hasNext()) {
                 V value = iterator.next();
@@ -289,7 +293,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
     @Override
     public <R, A, T extends Throwable> @NotNull R collect(@NotNull Collector<? super V, A, R> collector) throws T {
         A collection = collector.supplier().get();
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         while (iterator.hasNext()) {
             try {
                 V value = iterator.next();
@@ -313,7 +317,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
 
     @Override
     public <T extends Throwable> @NotNull Optional<V> first() throws T {
-        ThrowableIterator<V> iterator = iterator();
+        ThrowableIterator<V, T> iterator = iterator();
         if (iterator.hasNext()) {
             try {
                 return Optional.of(iterator.next());
@@ -328,7 +332,7 @@ public abstract class AbstractStream<V, S extends AbstractStream<V, S>> implemen
     @Override
     public <T extends Throwable> @NotNull Stream<V> toStream() throws T {
         Stream.Builder<V> builder = Stream.builder();
-        ThrowableIterator<V> iterator = this.iterator();
+        ThrowableIterator<V, T> iterator = this.iterator();
         while (iterator.hasNext()) {
             try {
                 V value = iterator.next();

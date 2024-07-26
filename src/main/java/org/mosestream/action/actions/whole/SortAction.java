@@ -18,7 +18,7 @@ public class SortAction<V, T extends Throwable> implements WholeAction<V, V, T> 
     }
 
     @Override
-    public @UnknownNullability StreamActionResult<Iterable<V>> apply(@UnknownNullability ThrowableIterator<V> value) throws T {
+    public @UnknownNullability StreamActionResult<Iterable<V>> apply(@UnknownNullability ThrowableIterator<V, T> value) throws T {
         List<V> list = new LinkedList<>();
         try {
             while (value.hasNext()) {

@@ -26,7 +26,7 @@ public interface MoseDoubleStream extends MoseNumberStream<Double> {
     default @NotNull <T extends Throwable> OptionalDouble average() throws T {
         double total = 0;
         int amount = 0;
-        ThrowableIterator<Double> iterator = this.iterator();
+        ThrowableIterator<Double, T> iterator = this.iterator();
         if (!iterator.hasNext()) {
             return OptionalDouble.empty();
         }
